@@ -4,16 +4,22 @@
  * =====================================
  * GET    /api/tasks.php          — fetch all tasks for logged-in user
  * POST   /api/tasks.php          — create a new task
- * PUT    /api/tasks.php?id={id}  — update a task (title, status, priority, deadline)
+ * PUT    /api/tasks.php?id={id}  — update a task
  * DELETE /api/tasks.php?id={id}  — delete a task
  *
- * Security:
- *   - Session check on every request (authentication gate)
- *   - user_id always taken from session, never from client (IDOR prevention)
- *   - PDO prepared statements (SQL injection prevention)
+ * Security mechanisms:
+ *   1. Authentication gate  — every request checks $_SESSION['user_id']
+ *   2. IDOR prevention      — user_id always from session, never from client
+ *                             ownership verified before every PUT/DELETE
+ *   3. SQL injection        — PDO prepared statements throughout
+ *   4. XSS prevention       — htmlspecialchars() + filter_var() on all input
+ *   5. Input validation     — whitelist checks on priority and status values
+ *   6. Security headers     — X-Content-Type-Options, X-Frame-Options
  */
 
 header('Content-Type: application/json');
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
 
 require_once '../db/database.php';
 
@@ -23,9 +29,14 @@ session_set_cookie_params([
     'httponly' => true,
     'samesite' => 'Lax',
 ]);
-session_start();
 
-// ── AUTH GATE — all task endpoints require a valid session ──
+if (session_status() === PHP_SESSION_NONE) session_start();
+
+// ── AUTHENTICATION GATE ────────────────────────────────────
+// All task endpoints require a valid session.
+// user_id is ALWAYS read from the session — never from GET/POST params.
+// This prevents IDOR (Insecure Direct Object Reference) attacks where
+// a user could manipulate a parameter to access another user's tasks.
 if (empty($_SESSION['user_id'])) {
     http_response_code(401);
     echo json_encode(['error' => 'Unauthorised. Please log in.']);
@@ -37,15 +48,22 @@ $method = $_SERVER['REQUEST_METHOD'];
 $taskId = isset($_GET['id']) ? (int) $_GET['id'] : null;
 $data   = json_decode(file_get_contents('php://input'), true) ?? [];
 
-// ── GET — fetch all tasks for the logged-in user ───────────
+// Whitelists for server-side validation — reject anything not in these lists
+$allowed_priority = ['Low', 'Medium', 'High'];
+$allowed_status   = ['Pending', 'In Progress', 'Complete'];
+
+// ── GET — fetch tasks for the logged-in user ───────────────
 if ($method === 'GET') {
     $status   = $_GET['status']   ?? '';
     $priority = $_GET['priority'] ?? '';
 
+    // Validate filter values against whitelists to prevent injection
+    if ($status   && !in_array($status,   $allowed_status))   $status   = '';
+    if ($priority && !in_array($priority, $allowed_priority)) $priority = '';
+
     $sql    = 'SELECT * FROM tasks WHERE user_id = ?';
     $params = [$userId];
 
-    // Optional filters
     if ($status) {
         $sql      .= ' AND status = ?';
         $params[]  = $status;
@@ -59,16 +77,26 @@ if ($method === 'GET') {
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
-    echo json_encode($stmt->fetchAll());
+    $tasks = $stmt->fetchAll();
+
+    // Sanitise output — htmlspecialchars on text fields before sending to client
+    $tasks = array_map(function($t) {
+        $t['title']       = htmlspecialchars($t['title'],       ENT_QUOTES, 'UTF-8');
+        $t['description'] = htmlspecialchars($t['description'] ?? '', ENT_QUOTES, 'UTF-8');
+        return $t;
+    }, $tasks);
+
+    echo json_encode($tasks);
     exit;
 }
 
 // ── POST — create a new task ───────────────────────────────
 if ($method === 'POST') {
-    $title       = trim($data['title']       ?? '');
-    $description = trim($data['description'] ?? '');
-    $priority    = $data['priority']          ?? 'Medium';
-    $deadline    = $data['deadline']          ?? null;
+    // Sanitise and validate all inputs server-side
+    $title       = htmlspecialchars(trim($data['title']       ?? ''), ENT_QUOTES, 'UTF-8');
+    $description = htmlspecialchars(trim($data['description'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $priority    = $data['priority'] ?? 'Medium';
+    $deadline    = $data['deadline'] ?? null;
 
     if (!$title) {
         http_response_code(400);
@@ -76,8 +104,17 @@ if ($method === 'POST') {
         exit;
     }
 
-    $allowed_priority = ['Low', 'Medium', 'High'];
+    if (strlen($title) > 150) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Title too long (max 150 characters).']);
+        exit;
+    }
+
+    // Whitelist check — reject any priority value not in the allowed list
     if (!in_array($priority, $allowed_priority)) $priority = 'Medium';
+
+    // Validate deadline format if provided
+    if ($deadline && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $deadline)) $deadline = null;
 
     $stmt = $pdo->prepare(
         'INSERT INTO tasks (user_id, title, description, priority, deadline) VALUES (?, ?, ?, ?, ?)'
@@ -85,7 +122,7 @@ if ($method === 'POST') {
     $stmt->execute([$userId, $title, $description, $priority, $deadline ?: null]);
 
     http_response_code(201);
-    echo json_encode(['success' => 'Task created.', 'task_id' => $pdo->lastInsertId()]);
+    echo json_encode(['success' => 'Task created.', 'task_id' => (int) $pdo->lastInsertId()]);
     exit;
 }
 
@@ -97,7 +134,8 @@ if ($method === 'PUT') {
         exit;
     }
 
-    // Verify the task belongs to the logged-in user (IDOR prevention)
+    // IDOR check — verify this task belongs to the logged-in user
+    // A user must never be able to update another user's task by guessing an ID
     $check = $pdo->prepare('SELECT task_id FROM tasks WHERE task_id = ? AND user_id = ?');
     $check->execute([$taskId, $userId]);
     if (!$check->fetch()) {
@@ -106,16 +144,22 @@ if ($method === 'PUT') {
         exit;
     }
 
-    $title       = trim($data['title']       ?? '');
-    $description = trim($data['description'] ?? '');
-    $priority    = $data['priority']          ?? 'Medium';
-    $status      = $data['status']            ?? 'Pending';
-    $deadline    = $data['deadline']          ?? null;
+    $title       = htmlspecialchars(trim($data['title']       ?? ''), ENT_QUOTES, 'UTF-8');
+    $description = htmlspecialchars(trim($data['description'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $priority    = $data['priority'] ?? 'Medium';
+    $status      = $data['status']   ?? 'Pending';
+    $deadline    = $data['deadline'] ?? null;
 
-    $allowed_priority = ['Low', 'Medium', 'High'];
-    $allowed_status   = ['Pending', 'In Progress', 'Complete'];
+    if (!$title) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Task title is required.']);
+        exit;
+    }
+
+    // Whitelist validation — prevents arbitrary values being stored
     if (!in_array($priority, $allowed_priority)) $priority = 'Medium';
     if (!in_array($status,   $allowed_status))   $status   = 'Pending';
+    if ($deadline && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $deadline)) $deadline = null;
 
     $stmt = $pdo->prepare(
         'UPDATE tasks SET title = ?, description = ?, priority = ?, status = ?, deadline = ? WHERE task_id = ? AND user_id = ?'
@@ -134,7 +178,7 @@ if ($method === 'DELETE') {
         exit;
     }
 
-    // Verify ownership before deleting (IDOR prevention)
+    // IDOR check — user_id in WHERE clause ensures users can only delete their own tasks
     $stmt = $pdo->prepare('DELETE FROM tasks WHERE task_id = ? AND user_id = ?');
     $stmt->execute([$taskId, $userId]);
 

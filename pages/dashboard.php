@@ -334,11 +334,17 @@
     let currentFilter   = '';
     let currentFilterBy = 'status';
 
-    // ── Check session on load ──────────────────────────────
-    async function init() {
-        const res  = await fetch('/student-task-manager/api/auth.php?action=check');
-        // We rely on tasks endpoint returning 401 if not logged in
-        loadTasks();
+    // ── Load username into badge ───────────────────────────
+    async function loadUsername() {
+        const res = await fetch('/student-task-manager/api/auth.php?action=me');
+        if (res.status === 401) {
+            window.location.href = '/student-task-manager/index.php';
+            return;
+        }
+        const data = await res.json();
+        if (data.username) {
+            document.getElementById('username-badge').textContent = '👤 ' + data.username;
+        }
     }
 
     // ── Load tasks from API ────────────────────────────────
@@ -357,15 +363,6 @@
         }
 
         const tasks = await res.json();
-
-        // Update username badge from first task or session
-        const badge = document.getElementById('username-badge');
-        if (badge.textContent === '...') {
-            // Try to get username from a meta tag set by PHP
-            const meta = document.querySelector('meta[name="username"]');
-            if (meta) badge.textContent = '👤 ' + meta.content;
-        }
-
         renderTasks(tasks);
         updateStats(tasks);
     }
@@ -417,10 +414,6 @@
         document.getElementById('stat-total').textContent    = tasks.length;
         document.getElementById('stat-pending').textContent  = tasks.filter(t => t.status === 'Pending').length;
         document.getElementById('stat-complete').textContent = tasks.filter(t => t.status === 'Complete').length;
-
-        // Update username badge
-        const badge = document.getElementById('username-badge');
-        if (badge.textContent === '...') badge.textContent = '👤 User';
     }
 
     // ── Create task ────────────────────────────────────────
@@ -496,7 +489,8 @@
         setTimeout(() => el.className = 'notice', 3000);
     }
 
-    // Kick off
+    // Kick off — load username then tasks
+    loadUsername();
     loadTasks();
 </script>
 
