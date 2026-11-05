@@ -113,8 +113,8 @@ if ($method === 'POST') {
     // Whitelist check — reject any priority value not in the allowed list
     if (!in_array($priority, $allowed_priority)) $priority = 'Medium';
 
-    // Validate deadline format if provided
-    if ($deadline && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $deadline)) $deadline = null;
+    // Validate deadline format if provided (DATE or DATETIME)
+    if ($deadline && !preg_match('/^\d{4}-\d{2}-\d{2}( \d{2}:\d{2})?$/', $deadline)) $deadline = null;
 
     $stmt = $pdo->prepare(
         'INSERT INTO tasks (user_id, title, description, priority, deadline) VALUES (?, ?, ?, ?, ?)'
@@ -159,7 +159,7 @@ if ($method === 'PUT') {
     // Whitelist validation — prevents arbitrary values being stored
     if (!in_array($priority, $allowed_priority)) $priority = 'Medium';
     if (!in_array($status,   $allowed_status))   $status   = 'Pending';
-    if ($deadline && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $deadline)) $deadline = null;
+    if ($deadline && !preg_match('/^\d{4}-\d{2}-\d{2}( \d{2}:\d{2})?$/', $deadline)) $deadline = null;
 
     $stmt = $pdo->prepare(
         'UPDATE tasks SET title = ?, description = ?, priority = ?, status = ?, deadline = ? WHERE task_id = ? AND user_id = ?'

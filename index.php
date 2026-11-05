@@ -88,6 +88,20 @@
         input:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,.2); }
         input::placeholder { color: #3d4f6e; }
 
+        .pw-wrap { position: relative; }
+        .pw-wrap input { padding-right: 42px; }
+        .pw-toggle {
+            position: absolute;
+            right: 12px; top: 50%;
+            transform: translateY(-50%);
+            background: none; border: none;
+            cursor: pointer; padding: 0;
+            color: #475569;
+            display: flex; align-items: center;
+            transition: color .2s;
+        }
+        .pw-toggle:hover { color: #a78bfa; }
+
         .btn {
             width: 100%;
             padding: 12px;
@@ -115,6 +129,51 @@
         }
         .notice.error   { background: #450a0a; color: #fca5a5; border: 1px solid #7f1d1d; display: block; }
         .notice.success { background: #052e16; color: #86efac; border: 1px solid #14532d; display: block; }
+
+        /* ── Theme toggle ── */
+        .theme-toggle {
+            position: fixed;
+            top: 16px; right: 16px;
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            border: 1px solid rgba(124,58,237,.3);
+            background: rgba(15,20,40,.8);
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+            font-size: 18px;
+            display: flex; align-items: center; justify-content: center;
+            transition: background .25s, border-color .25s, transform .15s;
+            z-index: 999;
+        }
+        .theme-toggle:hover { transform: scale(1.1); border-color: #7c3aed; }
+
+        /* ── Light theme ── */
+        body.light {
+            background: #f1f5f9;
+            background-image:
+                radial-gradient(ellipse 80% 60% at 50% -10%, rgba(124,58,237,.12) 0%, transparent 70%),
+                radial-gradient(ellipse 40% 40% at 80% 80%, rgba(99,102,241,.08) 0%, transparent 60%);
+        }
+        body.light .logo h1 { color: #1e1b4b; }
+        body.light .logo p  { color: #64748b; }
+        body.light .card {
+            background: rgba(255,255,255,.9);
+            border-color: rgba(124,58,237,.2);
+            box-shadow: 0 24px 64px rgba(0,0,0,.1);
+        }
+        body.light .tabs { background: rgba(0,0,0,.06); border-color: rgba(124,58,237,.15); }
+        body.light .tab  { color: #64748b; }
+        body.light label { color: #475569; }
+        body.light input {
+            background: #f8fafc;
+            border-color: rgba(124,58,237,.25);
+            color: #1e293b;
+        }
+        body.light input::placeholder { color: #94a3b8; }
+        body.light .pw-toggle { color: #94a3b8; }
+        body.light .theme-toggle { background: rgba(255,255,255,.9); }
+        body.light .notice.error   { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+        body.light .notice.success { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
     </style>
 </head>
 <body>
@@ -144,7 +203,10 @@
             </div>
             <div class="form-group">
                 <label>Password</label>
-                <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+                <div class="pw-wrap">
+                    <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+                    <button type="button" class="pw-toggle" onclick="togglePw('login-password', this)" aria-label="Show password">&#128065;</button>
+                </div>
             </div>
             <button class="btn" onclick="login()">Log In</button>
         </div>
@@ -161,7 +223,10 @@
             </div>
             <div class="form-group">
                 <label>Password <span style="color:#475569;font-weight:400;">(min. 6 characters)</span></label>
-                <input type="password" id="reg-password" placeholder="••••••••" autocomplete="new-password">
+                <div class="pw-wrap">
+                    <input type="password" id="reg-password" placeholder="••••••••" autocomplete="new-password">
+                    <button type="button" class="pw-toggle" onclick="togglePw('reg-password', this)" aria-label="Show password">&#128065;</button>
+                </div>
             </div>
             <button class="btn" onclick="register()">Create Account</button>
         </div>
@@ -169,6 +234,13 @@
 </div>
 
 <script>
+    function togglePw(id, btn) {
+        const input = document.getElementById(id);
+        const show  = input.type === 'password';
+        input.type  = show ? 'text' : 'password';
+        btn.innerHTML = show ? '&#128064;' : '&#128065;';
+    }
+
     function switchTab(name) {
         document.querySelectorAll('.tab').forEach((t, i) => {
             t.classList.toggle('active', (i === 0 && name === 'login') || (i === 1 && name === 'register'));
@@ -233,6 +305,22 @@
             loginVisible ? login() : register();
         }
     });
+</script>
+
+<button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" aria-label="Toggle theme">🌙</button>
+
+<script>
+    (function() {
+        if (localStorage.getItem('mf-theme') === 'light') {
+            document.body.classList.add('light');
+            document.getElementById('theme-btn').textContent = '☀️';
+        }
+    })();
+    function toggleTheme() {
+        const isLight = document.body.classList.toggle('light');
+        document.getElementById('theme-btn').textContent = isLight ? '☀️' : '🌙';
+        localStorage.setItem('mf-theme', isLight ? 'light' : 'dark');
+    }
 </script>
 
 </body>
