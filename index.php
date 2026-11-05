@@ -8,7 +8,10 @@
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: Inter, Arial, system-ui, sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            background: #080b14;
+            background-image:
+                radial-gradient(ellipse 80% 60% at 50% -10%, rgba(99,60,220,.35) 0%, transparent 70%),
+                radial-gradient(ellipse 40% 40% at 80% 80%, rgba(139,92,246,.15) 0%, transparent 60%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -27,29 +30,31 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 52px; height: 52px;
-            border-radius: 14px;
-            background: #6366f1;
-            font-size: 24px;
-            margin-bottom: 12px;
-            box-shadow: 0 8px 24px rgba(99,102,241,.4);
+            width: 72px; height: 72px;
+            border-radius: 18px;
+            margin-bottom: 14px;
+            box-shadow: 0 0 32px rgba(124,58,237,.5), 0 8px 24px rgba(0,0,0,.4);
         }
-        .logo h1 { font-size: 1.4rem; font-weight: 700; color: #f1f5f9; letter-spacing: -.02em; }
-        .logo p  { font-size: .85rem; color: #94a3b8; margin-top: 4px; }
+        .logo-badge img { width: 72px; height: 72px; border-radius: 18px; object-fit: cover; }
+        .logo h1 { font-size: 1.6rem; font-weight: 800; color: #f1f5f9; letter-spacing: -.03em; }
+        .logo h1 span { background: linear-gradient(135deg, #a78bfa, #7c3aed); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .logo p  { font-size: .85rem; color: #6d7fa8; margin-top: 4px; }
 
         .card {
-            background: #1e293b;
-            border-radius: 18px;
+            background: rgba(15,20,40,.85);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
             padding: 32px;
-            box-shadow: 0 20px 60px rgba(0,0,0,.4);
-            border: 1px solid #334155;
+            box-shadow: 0 24px 64px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06);
+            border: 1px solid rgba(124,58,237,.25);
         }
         .tabs {
             display: flex;
-            background: #0f172a;
+            background: rgba(0,0,0,.3);
             border-radius: 10px;
             padding: 4px;
             margin-bottom: 24px;
+            border: 1px solid rgba(124,58,237,.15);
         }
         .tab {
             flex: 1;
@@ -57,14 +62,14 @@
             border: none;
             border-radius: 8px;
             background: transparent;
-            color: #64748b;
+            color: #6d7fa8;
             font: inherit;
             font-size: .85rem;
             font-weight: 600;
             cursor: pointer;
             transition: background .2s, color .2s;
         }
-        .tab.active { background: #6366f1; color: #fff; }
+        .tab.active { background: linear-gradient(135deg, #7c3aed, #6366f1); color: #fff; box-shadow: 0 4px 12px rgba(124,58,237,.4); }
 
         .form-group { margin-bottom: 16px; }
         label { display: block; font-size: .8rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px; }
@@ -72,33 +77,33 @@
             width: 100%;
             padding: 11px 14px;
             border-radius: 9px;
-            border: 1px solid #334155;
-            background: #0f172a;
-            color: #f1f5f9;
+            border: 1px solid rgba(124,58,237,.25);
+            background: rgba(0,0,0,.3);
+            color: #e2e8f0;
             font: inherit;
             font-size: .9rem;
             outline: none;
             transition: border-color .2s, box-shadow .2s;
         }
-        input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.2); }
-        input::placeholder { color: #475569; }
+        input:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,.2); }
+        input::placeholder { color: #3d4f6e; }
 
         .btn {
             width: 100%;
             padding: 12px;
             border-radius: 10px;
             border: none;
-            background: #6366f1;
+            background: linear-gradient(135deg, #7c3aed, #6366f1);
             color: #fff;
             font: inherit;
             font-size: .9rem;
             font-weight: 700;
             cursor: pointer;
             margin-top: 8px;
-            transition: background .2s, transform .15s;
-            box-shadow: 0 4px 14px rgba(99,102,241,.35);
+            transition: opacity .2s, transform .15s;
+            box-shadow: 0 4px 20px rgba(124,58,237,.45);
         }
-        .btn:hover { background: #4f46e5; transform: translateY(-1px); }
+        .btn:hover { opacity: .88; transform: translateY(-1px); }
 
         .notice {
             padding: 10px 14px;
@@ -116,8 +121,10 @@
 
 <div class="shell">
     <div class="logo">
-        <div class="logo-badge">📋</div>
-        <h1>MyFlow</h1>
+        <div class="logo-badge">
+            <img src="/student-task-manager/assets/logo.png" alt="MyFlow logo">
+        </div>
+        <h1>My<span>Flow</span></h1>
         <p>Student Task Management</p>
     </div>
 
