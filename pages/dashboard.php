@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard — TaskFlow</title>
+    <title>Dashboard — MyFlow</title>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -253,7 +253,7 @@
 <!-- Header -->
 <header class="header">
     <div class="header-logo">
-        <span>📋</span> TaskFlow
+        <span>📋</span> MyFlow
     </div>
     <div class="header-right">
         <span class="username-badge" id="username-badge">...</span>
